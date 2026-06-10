@@ -102,11 +102,13 @@ def crop_image(image_path: str, crop_insets: tuple[int, int, int, int]):
         cropped.save(image_path)
 
 
-def turn_page():
-    """Simulate pressing the right arrow key to turn to the next page."""
+def turn_page(reverse: bool = False):
+    """Simulate pressing arrow key to turn to the next page."""
+    # key code 123 = left arrow, 124 = right arrow
+    key = 123 if reverse else 124
     subprocess.run(
         ["osascript", "-e",
-         'tell application "System Events" to key code 124'],
+         f'tell application "System Events" to key code {key}'],
         capture_output=True, text=True, timeout=5,
     )
 
@@ -182,6 +184,10 @@ def parse_args():
     parser.add_argument(
         "--delay", type=float, default=1.5,
         help="Delay in seconds between page turns (default: 1.5)",
+    )
+    parser.add_argument(
+        "--reverse", action="store_true",
+        help="Use left arrow for page turn (for right-to-left books)",
     )
     parser.add_argument(
         "--crop", type=parse_crop, default=None,
@@ -296,7 +302,7 @@ def main():
                 break
 
             # Turn page and wait
-            turn_page()
+            turn_page(reverse=args.reverse)
             time.sleep(args.delay)
 
     except KeyboardInterrupt:
