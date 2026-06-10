@@ -41,6 +41,56 @@ def activate_kindle(app_name: str):
     time.sleep(0.5)
 
 
+def get_screen_size() -> tuple[int, int]:
+    """Get the main screen size (width, height) in points."""
+    result = subprocess.run(
+        ["osascript", "-l", "JavaScript", "-e",
+         'ObjC.import("AppKit"); var s = $.NSScreen.mainScreen.frame; '
+         'JSON.stringify({w: s.size.width, h: s.size.height})'],
+        capture_output=True, text=True, timeout=5,
+    )
+    import json
+    data = json.loads(result.stdout.strip())
+    return (int(data["w"]), int(data["h"]))
+
+
+def resize_kindle_window(aspect: str):
+    """Resize and position Kindle window to max size within the given aspect ratio."""
+    w_ratio, h_ratio = (int(x) for x in aspect.split(":"))
+    target = w_ratio / h_ratio
+
+    screen_w, screen_h = get_screen_size()
+    menu_bar = 25
+    avail_h = screen_h - menu_bar
+
+    if avail_h * target <= screen_w:
+        new_h = avail_h
+        new_w = int(avail_h * target)
+    else:
+        new_w = screen_w
+        new_h = int(screen_w / target)
+
+    new_x = (screen_w - new_w) // 2
+    new_y = menu_bar
+
+    script = f'''
+        tell application "System Events"
+            set p to first process whose name contains "Kindle"
+            set w to first window of p
+            set position of w to {{{new_x}, {new_y}}}
+            set size of w to {{{new_w}, {new_h}}}
+        end tell
+    '''
+    result = subprocess.run(
+        ["osascript", "-e", script],
+        capture_output=True, text=True, timeout=5,
+    )
+    if result.returncode != 0:
+        print(f"Warning: Could not resize Kindle window: {result.stderr.strip()}")
+    time.sleep(0.5)
+    print(f"Resized window: {new_w}x{new_h} at ({new_x},{new_y}) (aspect {aspect})")
+
+
 def get_kindle_window() -> tuple[int, int, int, int]:
     """Get Kindle window bounds as (x, y, width, height) via System Events."""
     script = '''
@@ -190,6 +240,14 @@ def parse_args():
         help="Use left arrow for page turn (for right-to-left books)",
     )
     parser.add_argument(
+        "--aspect", default="3:4", metavar="W:H",
+        help="Resize Kindle window to aspect ratio (default: 3:4)",
+    )
+    parser.add_argument(
+        "--no-resize", action="store_true",
+        help="Skip window resize, use current window as-is",
+    )
+    parser.add_argument(
         "--crop", type=parse_crop, default=None,
         help="Crop insets as LEFT,TOP,RIGHT,BOTTOM pixels",
     )
@@ -226,6 +284,10 @@ def main():
         sys.exit(1)
 
     activate_kindle(app_name)
+
+    if not args.no_resize:
+        resize_kindle_window(args.aspect)
+
     region = get_kindle_window()
     print(f"Kindle window ({app_name}): x={region[0]}, y={region[1]}, w={region[2]}, h={region[3]}")
 
