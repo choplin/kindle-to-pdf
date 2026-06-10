@@ -48,7 +48,7 @@ def get_kindle_window() -> tuple[int, int, int, int]:
             set p to first process whose name contains "Kindle"
             set pos to position of first window of p
             set sz to size of first window of p
-            return (item 1 of pos) & "," & (item 2 of pos) & "," & (item 1 of sz) & "," & (item 2 of sz)
+            return ((item 1 of pos) as text) & " " & ((item 2 of pos) as text) & " " & ((item 1 of sz) as text) & " " & ((item 2 of sz) as text)
         end tell
     '''
     try:
@@ -56,7 +56,7 @@ def get_kindle_window() -> tuple[int, int, int, int]:
             ["osascript", "-e", script],
             capture_output=True, text=True, check=True, timeout=5,
         )
-        parts = [int(s.strip()) for s in result.stdout.strip().split(",")]
+        parts = [int(s) for s in result.stdout.strip().split()]
         x, y, w, h = parts
         return (x, y, w, h)
     except subprocess.CalledProcessError as e:
@@ -66,10 +66,6 @@ def get_kindle_window() -> tuple[int, int, int, int]:
             print("Grant permission in:")
             print("  System Settings > Privacy & Security > Accessibility")
             print("Add your terminal app to the list.")
-            print()
-            print("If already granted, also try adding /usr/bin/osascript:")
-            print('  Run: sudo tccutil reset Accessibility')
-            print("  Then re-add your terminal app.")
             sys.exit(2)
         print("Error: Could not get Kindle window bounds.")
         print("Make sure a book is open in Kindle.")
