@@ -78,8 +78,8 @@ def _parse_args() -> argparse.Namespace:
         help="Number of pages to capture (default: auto-detect end)",
     )
     parser.add_argument(
-        "--delay", type=float, default=1.5,
-        help="Delay in seconds between page turns (default: 1.5)",
+        "--delay", type=float, default=3.0,
+        help="Max wait time in seconds for page render (default: 3.0)",
     )
     parser.add_argument(
         "--reverse", action="store_true",

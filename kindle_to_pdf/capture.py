@@ -8,6 +8,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 
 from PIL import Image
@@ -62,6 +63,8 @@ class CaptureSession:
 
     _STALL_LIMIT = 3
     _BOUNDS_REFRESH_INTERVAL = 10
+    _POLL_INTERVAL = 0.2
+    _RENDER_THRESHOLD = 0.99
 
     def __init__(self, config: Config, kindle: KindleWindow):
         self._config = config
@@ -95,7 +98,7 @@ class CaptureSession:
         stall_count = 0
 
         mode_str = "auto-detect" if auto_mode else f"{max_pages} pages"
-        print(f"Mode: {mode_str}, delay: {self._config.delay}s")
+        print(f"Mode: {mode_str}, max wait: {self._config.delay}s")
         print("Press Ctrl+C to stop and generate PDF from captured pages.\n")
 
         for page_num in range(start_page, start_page + max_pages):
@@ -135,9 +138,41 @@ class CaptureSession:
                 break
 
             self._kindle.turn_page(self._config.reverse)
-            time.sleep(self._config.delay)
+            self._wait_for_render()
 
         return list(self._pages)
+
+    def _wait_for_render(self):
+        """Poll screenshots until the page visually stabilizes."""
+        bounds = self._kindle.bounds
+        max_wait = self._config.delay
+
+        fd_prev, tmp_prev = tempfile.mkstemp(suffix=".png")
+        fd_curr, tmp_curr = tempfile.mkstemp(suffix=".png")
+        os.close(fd_prev)
+        os.close(fd_curr)
+
+        try:
+            time.sleep(self._POLL_INTERVAL)
+            if not _capture_screenshot(bounds, tmp_prev):
+                return
+
+            elapsed = self._POLL_INTERVAL
+            while elapsed < max_wait:
+                time.sleep(self._POLL_INTERVAL)
+                elapsed += self._POLL_INTERVAL
+
+                if not _capture_screenshot(bounds, tmp_curr):
+                    continue
+
+                if _compute_similarity(tmp_prev, tmp_curr) > self._RENDER_THRESHOLD:
+                    return
+
+                os.replace(tmp_curr, tmp_prev)
+        finally:
+            for p in (tmp_prev, tmp_curr):
+                if os.path.exists(p):
+                    os.remove(p)
 
     def cleanup(self):
         """Remove the output directory."""
