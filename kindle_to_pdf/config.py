@@ -36,6 +36,8 @@ class Config:
     resume: str | None
     similarity_threshold: float
     dpi: int
+    resize_width: int | None
+    resize_scale: int | None
 
     @classmethod
     def from_cli(cls) -> Config:
@@ -53,6 +55,8 @@ class Config:
             resume=args.resume,
             similarity_threshold=args.similarity_threshold,
             dpi=args.dpi,
+            resize_width=args.resize_width,
+            resize_scale=args.resize_scale,
         )
 
 
@@ -116,5 +120,13 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--dpi", type=int, default=150,
         help="DPI for PDF output (default: 150)",
+    )
+    parser.add_argument(
+        "--resize-width", type=int, default=None, metavar="PX",
+        help="Max image width in pixels (height scales proportionally)",
+    )
+    parser.add_argument(
+        "--resize-scale", type=int, default=None, metavar="PERCENT",
+        help="Scale images by percentage (e.g. 50 for half size)",
     )
     return parser.parse_args()

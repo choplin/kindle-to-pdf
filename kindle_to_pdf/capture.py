@@ -40,6 +40,25 @@ def _crop_image(image_path: str, insets: CropInsets):
         cropped.save(image_path)
 
 
+def _resize_image(image_path: str, max_width: int | None, scale: int | None):
+    if max_width is None and scale is None:
+        return
+    with Image.open(image_path) as img:
+        w, h = img.size
+        target_w = w
+        if max_width is not None and scale is not None:
+            target_w = min(max_width, int(w * scale / 100))
+        elif max_width is not None:
+            target_w = min(w, max_width)
+        else:
+            target_w = int(w * scale / 100)
+        if target_w >= w:
+            return
+        target_h = int(h * target_w / w)
+        resized = img.resize((target_w, target_h), Image.LANCZOS)
+        resized.save(image_path)
+
+
 def _compute_similarity(path_a: str, path_b: str) -> float:
     with Image.open(path_a) as img_a, Image.open(path_b) as img_b:
         thumb_a = img_a.resize((64, 64)).convert("L")
@@ -113,6 +132,8 @@ class CaptureSession:
 
             if self._config.crop:
                 _crop_image(page_path, self._config.crop)
+
+            _resize_image(page_path, self._config.resize_width, self._config.resize_scale)
 
             self._pages.append(page_path)
             print(f"  Captured page {page_num}", end="")
