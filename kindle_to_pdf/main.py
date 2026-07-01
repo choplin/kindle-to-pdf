@@ -3,7 +3,7 @@
 from kindle_to_pdf.capture import CaptureSession
 from kindle_to_pdf.config import Config
 from kindle_to_pdf.kindle import KindleWindow
-from kindle_to_pdf.pdf import generate_pdf
+from kindle_to_pdf.pdf import apply_ocr, generate_pdf
 
 
 def main():
@@ -27,6 +27,9 @@ def main():
     if pages:
         print(f"\nGenerating PDF from {len(pages)} pages...")
         generate_pdf(pages, config.output, dpi=config.dpi)
+        if config.ocr:
+            print("Running OCR...")
+            apply_ocr(config.output, language=config.ocr_lang, dpi=config.dpi)
     else:
         print("No pages captured.")
 

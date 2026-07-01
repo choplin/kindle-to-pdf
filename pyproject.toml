@@ -4,8 +4,12 @@ version = "0.1.0"
 description = "Capture Kindle Mac app pages as screenshots and compile them into a PDF"
 requires-python = ">=3.12"
 dependencies = [
+    "ocrmypdf>=17.6.0",
     "pillow>=10.0.0",
 ]
 
 [project.scripts]
 kindle-to-pdf = "kindle_to_pdf:main"
+
+[tool.ty.environment]
+python = ".venv"

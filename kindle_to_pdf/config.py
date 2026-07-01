@@ -38,6 +38,8 @@ class Config:
     dpi: int
     resize_width: int | None
     resize_scale: int | None
+    ocr: bool
+    ocr_lang: str
 
     @classmethod
     def from_cli(cls) -> Config:
@@ -57,6 +59,8 @@ class Config:
             dpi=args.dpi,
             resize_width=args.resize_width,
             resize_scale=args.resize_scale,
+            ocr=args.ocr,
+            ocr_lang=args.ocr_lang,
         )
 
 
@@ -128,5 +132,13 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--resize-scale", type=int, default=None, metavar="PERCENT",
         help="Scale images by percentage (e.g. 50 for half size)",
+    )
+    parser.add_argument(
+        "--ocr", action="store_true",
+        help="Add OCR text layer to PDF (requires tesseract)",
+    )
+    parser.add_argument(
+        "--ocr-lang", default="jpn",
+        help="OCR language (default: jpn). Use '+' for multiple: jpn+eng",
     )
     return parser.parse_args()
