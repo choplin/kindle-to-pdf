@@ -6,26 +6,20 @@ import glob
 import os
 import re
 import shutil
-import subprocess
 import sys
 import tempfile
 import time
 
 from PIL import Image
 
+from kindle_to_pdf.backend import PlatformBackend
 from kindle_to_pdf.config import Config, CropInsets, WindowBounds
 from kindle_to_pdf.kindle import KindleWindow
 
 
-def _capture_screenshot(bounds: WindowBounds, output_path: str) -> bool:
+def _capture_screenshot(backend: PlatformBackend, bounds: WindowBounds, output_path: str) -> bool:
     for attempt in range(2):
-        result = subprocess.run(
-            ["screencapture", "-x",
-             f"-R{bounds.x},{bounds.y},{bounds.width},{bounds.height}",
-             output_path],
-            capture_output=True, text=True, timeout=10,
-        )
-        if result.returncode == 0 and os.path.exists(output_path):
+        if backend.capture_region(bounds, output_path) and os.path.exists(output_path):
             return True
         if attempt == 0:
             time.sleep(1)
@@ -88,6 +82,7 @@ class CaptureSession:
     def __init__(self, config: Config, kindle: KindleWindow):
         self._config = config
         self._kindle = kindle
+        self._backend = kindle.backend
         self._output_dir = self._resolve_output_dir()
         self._pages: list[str] = []
 
@@ -126,7 +121,7 @@ class CaptureSession:
             if (page_num - start_page) % self._BOUNDS_REFRESH_INTERVAL == 0 and page_num != start_page:
                 self._kindle.refresh_bounds()
 
-            if not _capture_screenshot(self._kindle.bounds, page_path):
+            if not _capture_screenshot(self._backend, self._kindle.bounds, page_path):
                 print(f"Warning: Failed to capture page {page_num}, skipping.")
                 continue
 
@@ -175,7 +170,7 @@ class CaptureSession:
 
         try:
             time.sleep(self._POLL_INTERVAL)
-            if not _capture_screenshot(bounds, tmp_prev):
+            if not _capture_screenshot(self._backend, bounds, tmp_prev):
                 return
 
             elapsed = self._POLL_INTERVAL
@@ -183,7 +178,7 @@ class CaptureSession:
                 time.sleep(self._POLL_INTERVAL)
                 elapsed += self._POLL_INTERVAL
 
-                if not _capture_screenshot(bounds, tmp_curr):
+                if not _capture_screenshot(self._backend, bounds, tmp_curr):
                     continue
 
                 if _compute_similarity(tmp_prev, tmp_curr) > self._RENDER_THRESHOLD:

@@ -1,6 +1,6 @@
 # 📖 Kindle to PDF
 
-KindleのMacアプリからページをスクリーンショットで自動撮影し、PDFにまとめるツール。
+Kindleアプリからページをスクリーンショットで自動撮影し、PDFにまとめるツール。**macOS** と **Windows** に対応しています。
 
 ## ⚡ Setup
 
@@ -8,12 +8,23 @@ KindleのMacアプリからページをスクリーンショットで自動撮�
 uv sync
 ```
 
+OS依存の処理（ウィンドウ操作・スクリーンショット・ページ送り）は `kindle_to_pdf/backend.py` の `PlatformBackend` に集約されており、実行時に自動で `MacBackend` / `WindowsBackend` が選択されます。
+
 ### 🔐 macOS Permission
 
 スクリプトはキーボード操作をシミュレートするため、**Accessibility権限**が必要です。
 
 1. **System Settings** > **Privacy & Security** > **Accessibility** を開く
 2. 使用するターミナルアプリ（Terminal, iTerm2, Warp等）を追加して有効化
+
+さらにスクリーンショット撮影には **Screen Recording権限** も必要です（同じく Privacy & Security から付与）。
+
+### 🪟 Windows
+
+追加の権限設定は不要です。`uv sync` で `pywin32` が自動的にインストールされます（Windows環境のみ）。
+
+- 高DPI環境ではプロセスを per-monitor DPI aware として起動し、ウィンドウ座標とスクリーンショットを物理ピクセルで一致させています。
+- ページ送りキーはフォアグラウンドの Kindle ウィンドウへ送出されるため、撮影中は他ウィンドウを操作しないでください。
 
 ## 🚀 Usage
 

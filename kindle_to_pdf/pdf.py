@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import sys
 
 from PIL import Image
 
@@ -37,7 +38,12 @@ def apply_ocr(pdf_path: str, language: str = "jpn", dpi: int = 150):
     """Add OCR text layer to an existing PDF."""
     if not shutil.which("tesseract"):
         print("Error: tesseract is not installed.")
-        print("  Install with: brew install tesseract tesseract-lang")
+        if sys.platform == "darwin":
+            print("  Install with: brew install tesseract tesseract-lang")
+        elif sys.platform.startswith("win"):
+            print("  Install from: https://github.com/UB-Mannheim/tesseract/wiki")
+        else:
+            print("  Install the 'tesseract-ocr' package for your distribution.")
         return False
 
     import ocrmypdf

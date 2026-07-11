@@ -1,55 +1,39 @@
-"""Kindle application window control via AppleScript."""
+"""Kindle application window control, delegated to a platform backend."""
 
 from __future__ import annotations
 
-import json
-import subprocess
 import sys
-import time
 
+from kindle_to_pdf.backend import PlatformBackend, PlatformError
 from kindle_to_pdf.config import WindowBounds
 
 _APP_NAMES = ["Amazon Kindle", "Kindle"]
 
 
-def _run_osascript(script: str, timeout: int = 5) -> subprocess.CompletedProcess:
-    return subprocess.run(
-        ["osascript", "-e", script],
-        capture_output=True, text=True, timeout=timeout,
-    )
-
-
-def _get_screen_size() -> tuple[int, int]:
-    result = subprocess.run(
-        ["osascript", "-l", "JavaScript", "-e",
-         'ObjC.import("AppKit"); var s = $.NSScreen.mainScreen.frame; '
-         'JSON.stringify({w: s.size.width, h: s.size.height})'],
-        capture_output=True, text=True, timeout=5,
-    )
-    data = json.loads(result.stdout.strip())
-    return (int(data["w"]), int(data["h"]))
-
-
 class KindleWindow:
     """Handle to the running Kindle application window."""
 
-    def __init__(self, app_name: str):
+    def __init__(self, app_name: str, backend: PlatformBackend):
         self._app_name = app_name
+        self._backend = backend
         self._bounds: WindowBounds | None = None
 
     @classmethod
-    def find(cls) -> KindleWindow:
+    def find(cls, backend: PlatformBackend) -> KindleWindow:
         """Detect running Kindle app and return a window handle."""
-        for name in _APP_NAMES:
-            result = _run_osascript(f'application "{name}" is running')
-            if result.stdout.strip() == "true":
-                return cls(name)
-        print("Error: Kindle app is not running. Please open Kindle and a book first.")
-        sys.exit(1)
+        name = backend.find_running_app(_APP_NAMES)
+        if name is None:
+            print("Error: Kindle app is not running. Please open Kindle and a book first.")
+            sys.exit(1)
+        return cls(name, backend)
 
     @property
     def app_name(self) -> str:
         return self._app_name
+
+    @property
+    def backend(self) -> PlatformBackend:
+        return self._backend
 
     @property
     def bounds(self) -> WindowBounds:
@@ -59,17 +43,16 @@ class KindleWindow:
 
     def activate(self):
         """Bring the Kindle app to the foreground."""
-        _run_osascript(f'tell application "{self._app_name}" to activate')
-        time.sleep(0.5)
+        self._backend.activate(self._app_name)
 
     def resize(self, aspect: str):
         """Resize and position window to max size within the given aspect ratio."""
         w_ratio, h_ratio = (int(x) for x in aspect.split(":"))
         target = w_ratio / h_ratio
 
-        screen_w, screen_h = _get_screen_size()
-        menu_bar = 25
-        avail_h = screen_h - menu_bar
+        screen_w, screen_h = self._backend.screen_size()
+        top_margin = 25
+        avail_h = screen_h - top_margin
 
         if avail_h * target <= screen_w:
             new_h = avail_h
@@ -79,65 +62,24 @@ class KindleWindow:
             new_h = int(screen_w / target)
 
         new_x = (screen_w - new_w) // 2
-        new_y = menu_bar
+        new_y = top_margin
 
-        script = f'''
-            tell application "System Events"
-                set p to first process whose name contains "Kindle"
-                set w to first window of p
-                set position of w to {{{new_x}, {new_y}}}
-                set size of w to {{{new_w}, {new_h}}}
-            end tell
-        '''
-        result = subprocess.run(
-            ["osascript", "-e", script],
-            capture_output=True, text=True, timeout=5,
-        )
-        if result.returncode != 0:
-            print(f"Warning: Could not resize Kindle window: {result.stderr.strip()}")
-        time.sleep(0.5)
+        try:
+            self._backend.set_window_bounds(self._app_name, new_x, new_y, new_w, new_h)
+        except PlatformError as e:
+            print(f"Warning: Could not resize Kindle window: {e.message}")
+
         self._bounds = WindowBounds(new_x, new_y, new_w, new_h)
         print(f"Resized window: {new_w}x{new_h} at ({new_x},{new_y}) (aspect {aspect})")
 
     def refresh_bounds(self):
-        """Re-fetch window bounds from System Events."""
-        self._bounds = self._fetch_bounds()
+        """Re-fetch window bounds from the platform backend."""
+        try:
+            self._bounds = self._backend.window_bounds(self._app_name)
+        except PlatformError as e:
+            print(e.message)
+            sys.exit(e.exit_code)
 
     def turn_page(self, reverse: bool = False):
         """Simulate pressing arrow key to turn to the next page."""
-        key = 123 if reverse else 124
-        _run_osascript(f'tell application "System Events" to key code {key}')
-
-    def _fetch_bounds(self) -> WindowBounds:
-        script = '''
-            tell application "System Events"
-                set p to first process whose name contains "Kindle"
-                set pos to position of first window of p
-                set sz to size of first window of p
-                return ((item 1 of pos) as text) & " " & ((item 2 of pos) as text) & " " & ((item 1 of sz) as text) & " " & ((item 2 of sz) as text)
-            end tell
-        '''
-        try:
-            result = subprocess.run(
-                ["osascript", "-e", script],
-                capture_output=True, text=True, check=True, timeout=5,
-            )
-            parts = [int(s) for s in result.stdout.strip().split()]
-            x, y, w, h = parts
-            return WindowBounds(x, y, w, h)
-        except subprocess.CalledProcessError as e:
-            stderr = e.stderr.strip() if e.stderr else ""
-            if "-1719" in stderr:
-                print("Error: Accessibility permission is required.")
-                print("Grant permission in:")
-                print("  System Settings > Privacy & Security > Accessibility")
-                print("Add your terminal app to the list.")
-                sys.exit(2)
-            print("Error: Could not get Kindle window bounds.")
-            print("Make sure a book is open in Kindle.")
-            if stderr:
-                print(f"  Detail: {stderr}")
-            sys.exit(1)
-        except (ValueError, IndexError):
-            print("Error: Failed to parse Kindle window bounds.")
-            sys.exit(1)
+        self._backend.turn_page(reverse)

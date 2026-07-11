@@ -1,11 +1,12 @@
 [project]
 name = "kindle-to-pdf"
 version = "0.1.0"
-description = "Capture Kindle Mac app pages as screenshots and compile them into a PDF"
+description = "Capture Kindle app pages as screenshots and compile them into a PDF (macOS and Windows)"
 requires-python = ">=3.12"
 dependencies = [
     "ocrmypdf>=17.6.0",
     "pillow>=10.0.0",
+    "pywin32>=306; sys_platform == 'win32'",
 ]
 
 [project.scripts]

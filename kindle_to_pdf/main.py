@@ -1,5 +1,6 @@
 """Entry point for kindle-to-pdf."""
 
+from kindle_to_pdf.backend import get_backend
 from kindle_to_pdf.capture import CaptureSession
 from kindle_to_pdf.config import Config
 from kindle_to_pdf.kindle import KindleWindow
@@ -9,7 +10,8 @@ from kindle_to_pdf.pdf import apply_ocr, generate_pdf
 def main():
     config = Config.from_cli()
 
-    kindle = KindleWindow.find()
+    backend = get_backend()
+    kindle = KindleWindow.find(backend)
     kindle.activate()
     if not config.no_resize:
         kindle.resize(config.aspect)
