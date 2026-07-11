@@ -1,6 +1,6 @@
 # 📖 Kindle to PDF
 
-Kindleアプリからページをスクリーンショットで自動撮影し、PDFにまとめるツール。**macOS** と **Windows** に対応しています。
+A tool that automatically captures Kindle app pages as screenshots and compiles them into a PDF. Supports both **macOS** and **Windows**.
 
 ## ⚡ Setup
 
@@ -8,35 +8,35 @@ Kindleアプリからページをスクリーンショットで自動撮影し�
 uv sync
 ```
 
-OS依存の処理（ウィンドウ操作・スクリーンショット・ページ送り）は `kindle_to_pdf/backend.py` の `PlatformBackend` に集約されており、実行時に自動で `MacBackend` / `WindowsBackend` が選択されます。
+All OS-dependent work (window control, screenshots, page turns) is consolidated in `PlatformBackend` in `kindle_to_pdf/backend.py`, and the appropriate `MacBackend` / `WindowsBackend` is selected automatically at runtime.
 
 ### 🔐 macOS Permission
 
-スクリプトはキーボード操作をシミュレートするため、**Accessibility権限**が必要です。
+Because the script simulates keyboard input, it requires **Accessibility permission**.
 
-1. **System Settings** > **Privacy & Security** > **Accessibility** を開く
-2. 使用するターミナルアプリ（Terminal, iTerm2, Warp等）を追加して有効化
+1. Open **System Settings** > **Privacy & Security** > **Accessibility**
+2. Add and enable your terminal app (Terminal, iTerm2, Warp, etc.)
 
-さらにスクリーンショット撮影には **Screen Recording権限** も必要です（同じく Privacy & Security から付与）。
+Capturing screenshots also requires **Screen Recording permission** (granted from the same Privacy & Security section).
 
 ### 🪟 Windows
 
-追加の権限設定は不要です。`uv sync` で `pywin32` が自動的にインストールされます（Windows環境のみ）。
+No extra permission setup is needed. `uv sync` installs `pywin32` automatically (on Windows only).
 
-- 高DPI環境ではプロセスを per-monitor DPI aware として起動し、ウィンドウ座標とスクリーンショットを物理ピクセルで一致させています。
-- ページ送りキーはフォアグラウンドの Kindle ウィンドウへ送出されるため、撮影中は他ウィンドウを操作しないでください。
+- On high-DPI setups the process runs as per-monitor DPI aware, so window coordinates and screenshots are aligned in physical pixels.
+- Page-turn keys are sent to the foreground Kindle window, so do not interact with other windows while capturing.
 
 ## 🚀 Usage
 
-Kindleアプリで書籍を開いた状態で実行します。
+Run it with a book open in the Kindle app.
 
 ### Basic
 
 ```bash
-# 50ページ撮影してPDF化
+# Capture 50 pages and build a PDF
 uv run kindle_to_pdf.py -n 50 output.pdf
 
-# 自動で末尾を検出（ページが変わらなくなったら停止）
+# Auto-detect the end (stop when the page stops changing)
 uv run kindle_to_pdf.py output.pdf
 ```
 
@@ -50,7 +50,7 @@ Positional:
 
 Options:
   -n, --num-pages N               Capture exactly N pages
-  --delay SECONDS                 Delay between page turns (default: 1.5)
+  --delay SECONDS                 Max wait for page render (default: 3.0)
   --crop LEFT,TOP,RIGHT,BOTTOM    Crop Kindle UI elements (pixels)
   --keep-images                   Keep individual page PNGs
   --output-dir DIR                Directory for page images
@@ -62,22 +62,22 @@ Options:
 ### Examples
 
 ```bash
-# UI要素をトリミング（左30px、上60px、右30px、下40px）
+# Crop UI elements (left 30px, top 60px, right 30px, bottom 40px)
 uv run kindle_to_pdf.py --crop 30,60,30,40 -n 100 book.pdf
 
-# ページ画像を残す
+# Keep the page images
 uv run kindle_to_pdf.py --keep-images --output-dir ./my_book -n 50 book.pdf
 
-# 中断後に再開
+# Resume after an interruption
 uv run kindle_to_pdf.py --resume ./my_book book.pdf
 
-# ページ送りを遅くする（アニメーションが遅い場合）
+# Slow down page turns (for slow animations)
 uv run kindle_to_pdf.py --delay 3.0 book.pdf
 ```
 
 ## 💡 Tips
 
-- **Ctrl+C** で中断すると、撮影済みのページでPDFを生成します
-- Retina displayでは自動的に高解像度（2x）で撮影されます
-- `--crop` の値はKindleのウィンドウサイズやレイアウトに応じて調整してください
-- 撮影中はKindleウィンドウに触れないでください
+- Interrupting with **Ctrl+C** generates a PDF from the pages captured so far
+- On Retina displays, pages are automatically captured at high resolution (2x)
+- Adjust the `--crop` values to match the Kindle window size and layout
+- Do not touch the Kindle window while capturing
