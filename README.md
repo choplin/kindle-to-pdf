@@ -5,7 +5,7 @@
 Kindle to PDF drives the Kindle app on **macOS** and **Windows**: it brings the window to the front, captures each page, turns to the next one, and compiles everything into a single PDF — optionally with a searchable OCR text layer.
 
 ```bash
-uv run python -m kindle_to_pdf book.pdf
+uv run kindle-to-pdf book.pdf
 ```
 
 An example session, auto-detecting the end of the book:
@@ -48,6 +48,8 @@ PDF created: book.pdf (309 pages, 84.3 MB)
 uv sync
 ```
 
+This installs the dependencies and the `kindle-to-pdf` command into the project environment. `uv run python -m kindle_to_pdf` runs the same entry point if you prefer the module form.
+
 ### 🔐 macOS permissions
 
 The tool simulates keyboard input and takes screenshots, so grant your terminal app (Terminal, iTerm2, Warp, …) two permissions under **System Settings > Privacy & Security**:
@@ -79,7 +81,7 @@ If `tesseract` is missing, the PDF is still produced and only the OCR step is sk
 2. Run the tool and leave the machine alone until it finishes:
 
    ```bash
-   uv run python -m kindle_to_pdf book.pdf
+   uv run kindle-to-pdf book.pdf
    ```
 
 3. The window is resized to a 3:4 aspect ratio, pages are captured into `pages_<timestamp>/`, and capture stops once three consecutive pages look identical.
@@ -88,13 +90,13 @@ If `tesseract` is missing, the PDF is still produced and only the OCR step is sk
 To capture a fixed number of pages instead of detecting the end:
 
 ```bash
-uv run python -m kindle_to_pdf -n 50 book.pdf
+uv run kindle-to-pdf -n 50 book.pdf
 ```
 
 ## 🛠 Usage
 
 ```
-uv run python -m kindle_to_pdf [OPTIONS] OUTPUT
+uv run kindle-to-pdf [OPTIONS] OUTPUT
 ```
 
 `OUTPUT` is the path of the PDF to create.
@@ -138,19 +140,19 @@ uv run python -m kindle_to_pdf [OPTIONS] OUTPUT
 
 ```bash
 # Crop the Kindle UI: 30px left, 60px top, 30px right, 40px bottom
-uv run python -m kindle_to_pdf --crop 30,60,30,40 -n 100 book.pdf
+uv run kindle-to-pdf --crop 30,60,30,40 -n 100 book.pdf
 
 # Right-to-left book, with a searchable Japanese + English text layer
-uv run python -m kindle_to_pdf --reverse --ocr --ocr-lang jpn+eng book.pdf
+uv run kindle-to-pdf --reverse --ocr --ocr-lang jpn+eng book.pdf
 
 # Keep the page images in a named directory
-uv run python -m kindle_to_pdf --keep-images --output-dir ./my_book book.pdf
+uv run kindle-to-pdf --keep-images --output-dir ./my_book book.pdf
 
 # Resume after an interruption, reusing the images already captured
-uv run python -m kindle_to_pdf --resume ./my_book book.pdf
+uv run kindle-to-pdf --resume ./my_book book.pdf
 
 # Halve the image size to keep the PDF small
-uv run python -m kindle_to_pdf --resize-scale 50 book.pdf
+uv run kindle-to-pdf --resize-scale 50 book.pdf
 ```
 
 ## 🧩 How it works
